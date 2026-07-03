@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Chat Workspace</title>
+  <!-- Google Fonts - Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- LOGIN / REGISTER OVERLAY -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo-box">
+          <i data-lucide="message-square" class="logo-icon"></i>
+        </div>
+        <h2>Welcome to Workspace Chat</h2>
+        <p>Enter your username to join the real-time private messaging platform</p>
+      </div>
+      <form id="login-form" class="login-form">
+        <div class="input-group">
+          <label for="username-input">Username</label>
+          <input type="text" id="username-input" placeholder="e.g. JaimeTR" required autocomplete="off">
+        </div>
+        <div class="input-group">
+          <label for="password-input">Password</label>
+          <input type="password" id="password-input" placeholder="••••••••" required autocomplete="off">
+        </div>
+        <div id="login-error" class="login-error hidden">Username already taken or invalid.</div>
+        <button type="submit" class="btn-primary">
+          Join Workspace <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE APP (HIDDEN UNTIL LOGIN) -->
+  <div id="app-container" class="app-container hidden">
+    
+    <!-- LEFTMOST WORKSPACE SIDEBAR -->
+    <aside class="workspace-sidebar">
+      <div class="workspace-logo-container">
+        <div class="workspace-logo">
+          <i data-lucide="layout-grid" class="logo-icon"></i>
+        </div>
+        <span class="logo-text">Workspace</span>
+      </div>
+      
+      <nav class="workspace-nav">
+        <button class="nav-item active" title="Chats" id="nav-chats">
+          <i data-lucide="message-square"></i>
+          <span>Chats</span>
+        </button>
+        <button class="nav-item" title="Contacts" id="nav-contacts">
+          <i data-lucide="users"></i>
+          <span>Contacts</span>
+        </button>
+        <button class="nav-item" title="Notifications" id="nav-notifications">
+          <i data-lucide="bell"></i>
+          <span>Notifications</span>
+        </button>
+        <button class="nav-item" title="Settings" id="nav-settings">
+          <i data-lucide="settings"></i>
+          <span>Settings</span>
+        </button>
+      </nav>
+      
+      <div class="workspace-profile">
+        <div class="user-avatar-circle self-avatar" id="self-avatar">AR</div>
+        <div class="user-info-brief">
+          <div class="user-name" id="self-username">Alex Rivera</div>
+          <div class="user-role">Admin</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CHATS LIST PANEL -->
+    <section class="chats-panel">
+      <div class="panel-header">
+        <h3>Recent Messages</h3>
+        <div class="search-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="search-users" placeholder="Search chats...">
+        </div>
+      </div>
+      
+      <div class="users-list-container">
+        <div id="users-list" class="users-list">
+          <!-- Dynamically populated online users -->
+          <div class="no-users-placeholder">
+            <p>Waiting for other users to join...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="panel-footer">
+        <button class="btn-new-message" id="btn-new-chat">
+          <i data-lucide="plus"></i> NEW MESSAGE
+        </button>
+      </div>
+    </section>
+
+    <!-- CHAT AREA -->
+    <main class="chat-area" id="chat-area">
+      <!-- EMPTY STATE -->
+      <div id="chat-empty-state" class="chat-empty-state">
+        <i data-lucide="messages-square" class="empty-icon"></i>
+        <h3>No active conversation</h3>
+        <p>Select a connected user from the sidebar list to start exchanging secure, real-time private messages.</p>
+      </div>
+
+      <!-- ACTIVE CHAT INTERFACE -->
+      <div id="chat-active-interface" class="chat-active-interface hidden">
+        <!-- CHAT HEADER -->
+        <header class="chat-header">
+          <div class="chat-header-info">
+            <div class="user-avatar-circle" id="chat-recipient-avatar">EV</div>
+            <div>
+              <h4 id="chat-recipient-name">Elena Vance</h4>
+              <span class="user-status-text"><span class="status-dot online"></span>Active now</span>
+            </div>
+          </div>
+          <div class="chat-header-actions">
+            <button class="action-btn" title="Call"><i data-lucide="phone"></i></button>
+            <button class="action-btn" title="Video Call"><i data-lucide="video"></i></button>
+            <button class="action-btn" title="Search Message"><i data-lucide="search"></i></button>
+            <button class="action-btn" id="toggle-details-btn" title="Toggle Details"><i data-lucide="sidebar"></i></button>
+          </div>
+        </header>
+
+        <!-- MESSAGES BOX -->
+        <div class="messages-container" id="messages-container">
+          <div class="date-divider">
+            <span>TODAY</span>
+          </div>
+          <div id="messages-list" class="messages-list">
+            <!-- Dynamically populated private messages -->
+          </div>
+        </div>
+
+        <!-- INPUT BOX -->
+        <footer class="chat-input-footer">
+          <form id="chat-form" class="chat-form">
+            <div class="chat-input-wrapper">
+              <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+              <div class="chat-input-toolbar">
+                <div class="toolbar-left">
+                  <button type="button" class="toolbar-btn" title="Emoji"><i data-lucide="smile"></i></button>
+                  <button type="button" class="toolbar-btn" title="Attach File"><i data-lucide="paperclip"></i></button>
+                  <button type="button" class="toolbar-btn" title="Insert Image"><i data-lucide="image"></i></button>
+                  <button type="button" class="toolbar-btn text-format-btn" title="Markdown bold"><strong>B</strong></button>
+                  <button type="button" class="toolbar-btn text-format-btn" title="Markdown italic"><em>I</em></button>
+                </div>
+                <button type="submit" class="btn-send" id="btn-send">
+                  <i data-lucide="send"></i>
+                </button>
+              </div>
+            </div>
+          </form>
+        </footer>
+      </div>
+    </main>
+
+    <!-- RIGHT DETAILS PANEL -->
+    <aside class="details-panel" id="details-panel">
+      <!-- DETAILS BODY -->
+      <div class="details-content" id="details-content">
+        <div class="details-user-header">
+          <div class="details-avatar-large" id="details-recipient-avatar">EV</div>
+          <h3 id="details-recipient-name">Elena Vance</h3>
+          <p id="details-recipient-role" class="user-role-text">Senior Product Designer</p>
+        </div>
+        
+        <div class="details-actions">
+          <button class="details-action-btn">
+            <i data-lucide="user"></i>
+            <span>Profile</span>
+          </button>
+          <button class="details-action-btn">
+            <i data-lucide="volume-2"></i>
+            <span>Mute</span>
+          </button>
+          <button class="details-action-btn">
+            <i data-lucide="search"></i>
+            <span>Search</span>
+          </button>
+        </div>
+
+        <div class="details-section">
+          <h5>ABOUT</h5>
+          <p id="details-recipient-about">Creative thinker and UI specialist currently based in Seattle. Working on the next generation of collaboration tools.</p>
+        </div>
+
+        <div class="details-section">
+          <div class="section-title-row">
+            <h5>SHARED FILES</h5>
+            <a href="#" class="view-all-link">View All</a>
+          </div>
+          <div class="shared-files-list">
+            <div class="shared-file-item">
+              <div class="file-icon-box pdf">
+                <i data-lucide="file-text"></i>
+              </div>
+              <div class="file-info">
+                <span class="file-name">Style_Guide_2026.pdf</span>
+                <span class="file-meta">Yesterday • 1.2 MB</span>
+              </div>
+            </div>
+            <div class="shared-file-item">
+              <div class="file-icon-box image">
+                <i data-lucide="file-image"></i>
+              </div>
+              <div class="file-info">
+                <span class="file-name">Landing_Mockup.png</span>
+                <span class="file-meta">Aug 12 • 5.8 MB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="details-section settings-section">
+          <h5>SETTINGS</h5>
+          <button class="settings-action-row">
+            <div class="settings-left">
+              <i data-lucide="lock" class="settings-icon"></i>
+              <span>Encryption</span>
+            </div>
+            <i data-lucide="chevron-right" class="chevron-icon"></i>
+          </button>
+          <button class="settings-action-row block-contact-btn">
+            <div class="settings-left">
+              <i data-lucide="ban" class="settings-icon"></i>
+              <span>Block Contact</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- FLOATING SYSTEM TOAST CONTAINER -->
+  <div id="system-toast-container" class="system-toast-container"></div>
+
+  <!-- Socket.io client -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>

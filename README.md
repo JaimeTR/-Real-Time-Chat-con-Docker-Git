@@ -1,187 +1,178 @@
-# Real-Time Chat Workspace (Express + Socket.io + Docker)
+# Workspace de Chat en Tiempo Real (Express + Socket.io + Docker)
 
-An elegant, highly-responsive chat workspace featuring real-time private messaging. This application features a premium user interface inspired by Slack and Microsoft Teams, designed using a dark/light contrasted color system and Google Fonts.
+Un workspace de chat elegante y altamente interactivo que cuenta con mensajería privada en tiempo real. Esta aplicación tiene una interfaz de usuario premium inspirada en Slack y Microsoft Teams, diseñada utilizando un sistema de colores contrastados claros y oscuros, iconos modernos de Lucide y tipografía Plus Jakarta Sans.
 
-The development environment is fully containerized, reproducible, and secure.
+El entorno de desarrollo está completamente dockerizado, preparado para producción, es reproducible y seguro.
 
 ---
 
-## Architecture Overview
+## Arquitectura del Sistema
 
-The system uses a client-server architecture with bidirectional real-time communication provided by Socket.io.
+El sistema utiliza una arquitectura cliente-servidor con comunicación bidireccional en tiempo real provista por Socket.io, integrada en un ecosistema mixto con PHP para la inyección de eventos.
 
 ```
                   +----------------------------------+
-                  |         Express Server           |
-                  |     (Static File Hosting)        |
+                  |         Servidor Express         |
+                  |     (Hosting y REST API POST)    |
                   +----------------------------------+
                                    ^
-                                   | HTTP Request / Static Files
+                                   | HTTP Request / Archivos Estáticos
                                    v
                   +----------------------------------+
-                  |         Client Browser           |
+                  |         Cliente Browser          |
                   |     (HTML5 + Vanilla CSS/JS)     |
                   +----------------------------------+
                                    ^
-                                   | Socket.io Connection
+                                   | Conexión Socket.io
                                    v
              ==============================================
-             |          SOCKET.IO MESSAGING FLOW          |
+             |          FLUJO DE MENSAJERÍA SOCKET         |
              ==============================================
              
-  [Client 1 (Alex)]                                   [Client 2 (Elena)]
+  [Cliente 1 (Jaime)]                                [Cliente 2 (Elena)]
          |                                                    |
-         | --- 1. Register ('register', 'Alex') ---------->   |
-         | <--- 2. Acknowledge Registration (Success) ------  |
+         | --- 1. Registro ('register', 'Jaime') ---------->  |
+         | <--- 2. Confirmación Registro (Éxito) ----------   |
          |                                                    |
-         | <--- 3. Broadcast online list ('updateUserList') --| <--- Connected
+         | <--- 3. Broadcast Lista Activos ('updateUserList') | <--- Conectado
          |                                                    |
-         | --- 4. Send Message ('privateMessage') --------->  |
-         |    { to: 'Elena', message: 'Hello!' }              |
+         | --- 4. Mensaje Privado ('privateMessage') ------->  |
+         |    { to: 'Elena', message: '¡Hola!' }              |
          |                                                    |
-         |                                                    | (Server routes using
-         |                                                    |  Elena's socket.id)
+         |                                                    | (Servidor enruta usando
+         |                                                    |  el socket.id de Elena)
          |                                                    v
-         | <------------------------------------------------- | --- 5. Deliver Message
-         |                                                    |    { from: 'Alex', ... }
+         | <------------------------------------------------- | --- 5. Entrega Mensaje
+         |                                                    |    { from: 'Jaime', ... }
 ```
 
-### Key Messaging Protocols:
-1. **User Registration (`register` event)**: When a client logs in, they submit a username. The server validates if the username is alphanumeric and not already taken. If valid, the server associates the socket session with the username and stores it in an active map.
-2. **User Directory (`updateUserList` event)**: On connection, registration, or disconnection, the server broadcasts the updated array of active usernames to all connected sockets.
-3. **Private Messaging Routing (`privateMessage` event)**: A client sends a message targeting a specific recipient. The server retrieves the recipient's socket ID from its map and targets them directly using `io.to(socketId).emit('privateMessage')`.
-4. **Offline Resilience**: If a message is sent to an offline user, the server replies with an error callback, which is handled gracefully by the sender's client.
+### Protocolos Clave de Comunicación:
+1. **Registro de Usuarios (`register`)**: Al iniciar sesión, el cliente envía sus credenciales. El servidor valida el usuario y la contraseña contra una base de datos segura en memoria. Si es exitoso, asocia la sesión del socket con el nombre de usuario.
+2. **Directorio en Línea (`updateUserList`)**: Al conectarse, registrarse o desconectarse un usuario, el servidor emite la lista actualizada de nombres activos a todos los sockets conectados.
+3. **Enrutamiento Privado (`privateMessage`)**: Para mensajería privada, el cliente emite un evento con el destinatario y contenido. El servidor busca el ID de socket del destinatario en su mapa en memoria y le envía el mensaje de forma exclusiva mediante `io.to(socketId).emit()`.
+4. **Inyección de Eventos PHP (`systemMessage`)**: Un script externo de PHP realiza un POST HTTP al endpoint `/api/notify`. El servidor procesa la petición y emite un mensaje de sistema global (broadcast) o dirigido (privado) a los clientes de Socket.io.
 
 ---
 
-## Docker & Containerization
+## Docker y Contenedorización
 
-The application is containerized for maximum reproducibility using an optimized multi-stage concept:
+La aplicación está dockerizada para garantizar la máxima reproducibilidad del entorno mediante las siguientes optimizaciones:
 
-* **Base Image**: Uses `node:20-alpine` to ensure minimal image footprint and reduce vulnerability surface.
-* **Dependency Installation**: Runs `npm ci --only=production` which uses `package-lock.json` directly for deterministic builds and excludes development dependencies.
-* **Security Hardening**: Swaps execution ownership to the pre-configured non-root `node` user instead of leaving container processes running as `root`.
-* **Compose Orchestration**: Uses `docker-compose.yml` to define port forwarding (`3000:3000`), volume binding, and configuration parameters.
+* **Imagen Base**: Utiliza `node:20-alpine`, una imagen ultra-ligera que minimiza el tamaño del contenedor y reduce la superficie de posibles vulnerabilidades.
+* **Instalación de Dependencias**: Ejecuta `npm ci --only=production`, asegurando una instalación rápida, limpia y exacta basada únicamente en el archivo `package-lock.json` y omitiendo dependencias de desarrollo.
+* **Seguridad de Ejecución**: Cambia la propiedad de ejecución del proceso al usuario no privilegiado `node` en lugar de correr como `root` (práctica estándar de seguridad en contenedores).
+* **Orquestación**: Configurado mediante `docker-compose.yml` para mapear el puerto de red `3000:3000` y definir las variables de entorno de producción.
 
 ---
 
-## Setup & Running the Application
+## Configuración y Ejecución
 
-### Method 1: Running with Docker (Recommended)
+### Método 1: Ejecución con Docker (Recomendado)
 
-1. Ensure you have **Docker** and **Docker Compose** installed.
-2. Clone the repository and navigate to the project directory:
+1. Asegúrate de tener **Docker** y **Docker Compose** instalados y ejecutándose.
+2. Abre una terminal y sitúate en la raíz del proyecto:
    ```bash
    cd socket-chat
    ```
-3. Build and launch the container in the background:
+3. Construye y levanta el contenedor en segundo plano:
    ```bash
    docker compose up -d --build
    ```
-4. Access the workspace at: **`http://localhost:3000`**
-5. To view container logs:
+4. Accede al chat desde tu navegador en: **`http://localhost:3000`**
+5. Para inspeccionar los logs en tiempo real:
    ```bash
    docker compose logs -f
    ```
-6. To shut down the container:
+6. Para apagar y eliminar los contenedores del entorno:
    ```bash
    docker compose down
    ```
 
-### Method 2: Running Locally (Node.js required)
+### Método 2: Ejecución Local (Requiere Node.js)
 
-1. Ensure **Node.js (v18+)** is installed.
-2. Install production dependencies:
+1. Asegúrate de tener instalado **Node.js (v18 o superior)**.
+2. Instala las dependencias del proyecto:
    ```bash
    npm install
    ```
-3. Start the Express server:
+3. Inicia el servidor de Express:
    ```bash
    npm start
    ```
-4. Access the workspace at: **`http://localhost:3000`**
+4. Accede al chat en: **`http://localhost:3000`**
 
 ---
 
-## Authentication & Credentials
+## Credenciales de Acceso para Pruebas
 
-To test the application, use any of the following pre-configured credentials:
+Para validar el inicio de sesión y probar la comunicación, puedes utilizar las siguientes credenciales pre-configuradas en el servidor:
 
-| Username | Password | Role |
+| Username (Usuario) | Password (Contraseña) | Rol Asignado |
 | :--- | :--- | :--- |
-| `JaimeTR` | `admin123` | Administrator / Candidate |
+| `JaimeTR` | `admin123` | Administrador / Candidato |
 | `ElenaVance` | `admin123` | Senior Product Designer |
 | `JordanSmith` | `admin123` | Tech Lead |
 | `AlexRivera` | `admin123` | Support Engineer |
 
 ---
 
-## How to Test Private Messaging
+## Cómo Probar la Mensajería Privada (Parte 1)
 
-1. Open a browser tab at `http://localhost:3000` and login as **`JaimeTR`** with password **`admin123`**.
-2. Open a second **incognito** browser tab or a different browser at `http://localhost:3000` and login as **`ElenaVance`** with password **`admin123`**.
-3. In both screens, you will immediately see the other user appear in the **Recent Messages** list under the sidebar.
-4. Click on **Elena Vance** in Jaime's sidebar. Type a message and hit send.
-5. In Elena's browser window, see the message arrive in real-time. Click on **JaimeTR** in Elena's sidebar to reply privately!
+1. Abre una pestaña normal de tu navegador en `http://localhost:3000` e inicia sesión como **`JaimeTR`** (password: `admin123`).
+2. Abre una ventana de **Incógnito** (o usa otro navegador) en `http://localhost:3000` e inicia sesión como **`ElenaVance`** (password: `admin123`).
+3. En ambas pantallas verás aparecer al otro usuario en la lista lateral de **Recent Messages** con un círculo verde de estado activo.
+4. En la pantalla de Jaime, haz clic en **Elena Vance**, escribe un mensaje en la parte inferior y presiona Enviar.
+5. Verás cómo el mensaje se entrega instantáneamente en la pantalla de Elena. Selecciónala en su lista y respóndele de manera privada.
 
 ---
 
-## How to Test PHP Event Injection (Parte 2)
+## Cómo Probar la Inyección de Eventos PHP (Parte 2)
 
-We have implemented an API REST endpoint on the Node server and a native PHP script (`notificador.php`) to trigger live notifications.
+El notificador de PHP permite que procesos externos en backend (alertas automáticas, logs, reportes de caída de servicios) se reporten en vivo en el chat.
 
-### 1. HTTP Endpoint Details:
-* **Route**: `POST http://localhost:3000/api/notify`
-* **Headers**: `Content-Type: application/json`
-* **JSON Body**:
+### 1. Detalles del Endpoint Node:
+* **Ruta**: `POST http://localhost:3000/api/notify`
+* **Cuerpo JSON**:
   ```json
   {
-    "message": "Server Alert: Disk space at 95%",
+    "message": "Alerta del Servidor: Espacio en disco al 95%",
     "to": "JaimeTR" 
   }
   ```
-  *(Note: The `to` parameter is optional. If provided, it targets that specific online user; if omitted, it broadcasts globally to all online users).*
+  *(Nota: El parámetro `to` es opcional. Si se define, envía la alerta al usuario indicado. Si se omite, se difunde como alerta de sistema global a todos los conectados).*
 
-### 2. Testing the Notifier via CLI:
-Run the script from your terminal:
-```bash
-# A. Send a global broadcast message
-php notificador.php "Server Alert: CPU Load is at 92%"
+### 2. Probar desde la Consola (CLI):
+Ejecuta el script PHP desde tu terminal pasando los argumentos requeridos:
 
-# B. Send a targeted message to a specific user (must be online)
-php notificador.php "Important: Password update required" JaimeTR
-```
+* **Alerta Global (Broadcast)**:
+  ```bash
+  php php/notificador.php "Servidor de Producción: Estado OK - 14:00"
+  ```
+  *Ambos navegadores recibirán un banner de alerta flotante en la parte superior y verán el registro del sistema en el historial.*
 
-### 3. Testing the Notifier via Browser:
-If you have a local PHP web server, copy `notificador.php` to its web root and open:
-* **Broadcast**: `http://localhost/notificador.php?message=Alert+from+browser`
-* **Targeted**: `http://localhost/notificador.php?message=Secure+Notice&to=JaimeTR`
-*(The script renders a styled HTML card indicating if the injection succeeded or failed).*
+* **Alerta Dirigida (Privada)**:
+  ```bash
+  php php/notificador.php "Alerta de Seguridad: Intento de acceso denegado" JaimeTR
+  ```
+  *Solo la pantalla de `JaimeTR` mostrará la notificación.*
+
+### 3. Probar desde el Navegador:
+Si cuentas con un servidor local de PHP (Laragon, XAMPP, Apache), puedes colocar el script en tu directorio de servicios web y acceder a la URL:
+* `http://localhost/php/notificador.php?message=Alerta+Global+Web`
 
 ---
 
-## Git Workflow Details
+## Detalles del Repositorio y Git
 
-We follow a clean, atomic Git committing strategy where each task is committed step-by-step:
+Seguimos una metodología de commits atómicos para cada tarea del examen:
+* **First Commit**: Commit inicial vacío para marcar el inicio del examen.
+* **Task 2**: Configuración de archivos base (`package.json`, `.gitignore`).
+* **Task 3**: Lógica del servidor Express + Socket.io.
+* **Task 4**: Interfaz de usuario Slack-like (HTML, CSS y JS cliente).
+* **Task 5**: Dockerización completa (Dockerfile y compose).
+* **Task 6**: Documentación inicial.
+* **Parte 2**: Inyección de eventos PHP y enrutamiento API de notificaciones.
+* **Refactor**: Estructuración final modular y organización de directorios.
 
-* **First Commit**: Created an empty commit to initialize the repository.
-* **Task 2**: Created core Node files, package dependencies, and `.gitignore`.
-* **Task 3**: Implemented the main Express + Socket.io server logic.
-* **Task 4**: Designed and implemented the high-fidelity user interface.
-* **Task 5**: Created the Dockerfile and docker-compose configurations.
-* **Task 6**: Added full documentation (this README) and finalized commits.
-
-### Push to GitHub/GitLab
-
-To link this repository to your remote cloud hosting:
-
-```bash
-# 1. Add your remote repository origin URL
-git remote add origin <YOUR_REMOTE_REPOSITORY_URL>
-
-# 2. Rename the current branch to main (if master)
-git branch -M main
-
-# 3. Push your commits to the cloud
-git push -u origin main
-```
+---
+*Prueba técnica desarrollada por **Jaime Tarazona**.*
